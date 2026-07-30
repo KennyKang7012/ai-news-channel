@@ -51,4 +51,5 @@ _Updated at: 2026-07-30_
 | Twitter/X | ⬜ Not configured | — |
 | LinkedIn | ⬜ Not configured | — |
 | Threads | ⬜ Not configured | — |
+| Instagram | ⬜ Not configured | — |
 | Email (newsletter) | ⬜ Not configured | — |

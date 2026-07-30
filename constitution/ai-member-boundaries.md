@@ -26,15 +26,15 @@
 | ✅ CAN | ❌ CANNOT |
 |---|---|
 | Search and gather AI news | Do visual or design tasks |
-| Verify sources | Share context with Designer instance |
+| Verify sources | Share session context with the Designer agent |
 | Summarize findings | Make editorial decisions |
 | Identify trending topics | Publish anything |
 
-### Designer (Gemini Pro Vision)
+### Designer (gpt-image-2 / gpt-5.5, OpenAI)
 | ✅ CAN | ❌ CANNOT |
 |---|---|
 | Analyze image specs | Do research or writing |
-| Generate image card prompts | Share context with Researcher instance |
+| Generate image card prompts | Share session context with the Researcher agent |
 | Verify image dimensions | Make content decisions |
 | Suggest visual layouts | Execute code |
 
@@ -58,6 +58,6 @@
 
 ## Context Isolation Rules
 
-- Researcher and Designer MUST use separate Gemini API calls — never pass one's output as context to the other's prompt directly
+- Researcher (Gemini) and Designer (OpenAI) run on different providers by design — never pass one's output as context to the other's prompt directly
 - Each daily cycle starts with fresh working-notes — no carryover between days
 - Constitution files are READ-ONLY for all agents except Librarian

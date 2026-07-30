@@ -14,7 +14,7 @@ A fully automated AI news channel using **Harness Engineering** principles.
 | 🧠 CTO | Claude Opus | Editorial architecture & daily brief |
 | 👨‍💻 Developer | Claude Sonnet | Content generation & publishing |
 | 🔬 Researcher | Gemini Pro | News gathering & source verification |
-| 🎨 Designer | Gemini Vision | Image prompts & visual QA |
+| 🎨 Designer | gpt-image-2 / gpt-5.5 (OpenAI) | Image prompts & visual QA |
 | 📚 Librarian | Claude Haiku | Knowledge base & archiving |
 | ✅ Supervisor | Claude Sonnet | QA verification & delivery gate |
 
@@ -56,9 +56,11 @@ cp .env.example .env
 
 ### 2. Test API connections
 ```bash
-source .env  # or: export $(cat .env | xargs)
+set -a; source .env; set +a   # plain `source .env` sets shell-local vars only —
+                                # Python subprocesses won't see them without `set -a`
 
 python3 .claude/scripts/call_gemini.py --test
+python3 .claude/scripts/call_openai.py --test
 ```
 
 ### 3. Run your first cycle (dry run)
@@ -104,16 +106,21 @@ ai-news-channel/
 │   │   └── librarian.md
 │   ├── scripts/                     # API wrappers & publish scripts
 │   │   ├── call_gemini.py
+│   │   ├── call_openai.py
 │   │   ├── call_gemini_vision.py
 │   │   ├── publish_medium.py
 │   │   ├── publish_twitter.py
+│   │   ├── publish_linkedin.py
+│   │   ├── publish_threads.py
 │   │   ├── send_newsletter.py
 │   │   ├── verify_build.sh
 │   │   └── run_daily.sh
 │   └── settings.json
 ├── knowledge-base/
 │   ├── decisions/                   # CTO architectural decisions
-│   ├── task-instructions/           # PM briefs archive
+│   ├── archive/                     # Full per-cycle archive, written by Librarian
+│   │   └── YYYY-MM-DD/              # (all 6 working-notes files, post-cycle)
+│   ├── task-instructions/           # Reserved, not currently used by any agent
 │   ├── deliverables/                # Daily content outputs
 │   │   └── YYYY-MM-DD/
 │   │       ├── article.md
@@ -121,7 +128,8 @@ ai-news-channel/
 │   │       ├── image-prompt.md
 │   │       └── newsletter.md
 │   └── project-docs/
-│       └── topic-archive.md         # Prevents topic repetition
+│       ├── topic-archive.md         # Prevents topic repetition
+│       └── sources-YYYY-MM-DD.md    # Researcher's cleaned source registry, per cycle
 ├── working-notes/                   # Inter-agent communication (reset each cycle)
 │   ├── pm-brief.md
 │   ├── cto-analysis.md

@@ -2,10 +2,12 @@
 
 _Decided by: CTO_
 _Cycle: #001 (first cycle) — **DRY RUN, no live publish**_
-_Status: Handed off to Researcher_
+_Status: **Cycle complete — Supervisor PASS, PM approved, archived by Librarian.**_
 _Revision: **rev-3 (2026-07-30)** — revised after the PM answered all five open escalations from rev-2. Scope-and-governance changes only: social posts 3 → **4** (Instagram caption added), cycle confirmed as **dry run**, length conversion **accepted**, brand tag **stays English**, audience **confirmed Taiwan / Greater China**. **Topic, angle, structure, sourcing bar, language, register and rationale are unchanged.**_
 
-_Revision history: rev-1 (English, 3 social posts) → rev-2 (zh-TW + professional register) → rev-3 (PM decisions applied)._
+_Revision history: rev-1 (English, 3 social posts) → rev-2 (zh-TW + professional register) → rev-3 (PM decisions applied) → **post-Researcher: Headline Set B selected (see below), per the rev-3 contingency clause.**_
+
+**Post-rev-3 update (2026-07-30, after Researcher handoff):** The Researcher's Q2 finding confirmed Regulation (EU) 2026/1744 (the Digital Omnibus) formally entered into force on 27 July 2026 — the CTO's contingency clause (see "Key Structural Choices" below) therefore triggered **Headline Set B**, not the Set A default shown when this brief was first handed off. The "Primary headline" field below has been updated to record the actual headline used; this is a status update to this record, not a re-opened editorial decision — angle, topic, sourcing bar and structure are unchanged, exactly as the contingency clause anticipated.
 
 ---
 
@@ -25,7 +27,10 @@ _Revision history: rev-1 (English, 3 social posts) → rev-2 (zh-TW + profession
 
 **Audience (rev-3, confirmed by PM):** **Taiwan / Greater China readership** — 產品主管、法務、創辦人、AI 產品開發者, predominantly **outside** the EU. Section 3 therefore leads with 域外效力 (extraterritorial reach), as written in rev-2.
 
-**Primary headline (zh-TW):** 《歐盟人工智慧法》真正的期限在本週日:8 月 2 日起,哪些義務正式適用
+**Primary headline used (zh-TW, Headline Set B):** 歐盟讓步:《歐盟人工智慧法》最大一波義務延後,但並非全部
+_(Set B was selected over the Set A default because the Researcher confirmed the Digital Omnibus delay was formally adopted as binding law — see "Post-rev-3 update" above.)_
+
+_Set A default headline (drafted at rev-3, superseded by the above once the Researcher confirmed formal adoption): 《歐盟人工智慧法》真正的期限在本週日:8 月 2 日起,哪些義務正式適用_
 _(rev-1 English original, retained for the record: "The EU AI Act's Real Deadline Is Sunday — Here's What Actually Becomes Illegal")_
 
 ---

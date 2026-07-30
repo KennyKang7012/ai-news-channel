@@ -55,7 +55,7 @@ Every task goes through this loop. No shortcuts. No skipped steps.
 
 - **CTO** does NOT write content — designs the structure and brief only
 - **Developer** does NOT publish directly — must pass Supervisor first
-- **Researcher** and **Designer** run on separate Gemini instances — no shared context
+- **Researcher** (Gemini) and **Designer** (OpenAI) run on different providers — no shared context between them
 - **Supervisor** does NOT approve incomplete deliverable sets (all 5 outputs required)
 - **Librarian** archives after every completed cycle — knowledge never lost
 - All outputs saved to `knowledge-base/deliverables/<YYYY-MM-DD>/` before task is done
