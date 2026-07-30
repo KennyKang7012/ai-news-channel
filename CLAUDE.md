@@ -2,6 +2,7 @@
 
 > "What determines whether AI can reliably deliver results is not the model itself,
 > but the system wrapped around the model." — Harness Engineering
+> Source: https://assets.move-channel.com/s/20260519-harness-engineering/#download
 
 ---
 
