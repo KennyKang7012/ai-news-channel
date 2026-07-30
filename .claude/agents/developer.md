@@ -88,4 +88,4 @@ Date: <YYYY-MM-DD>
 - Do NOT publish live without Supervisor PASS
 - Do NOT deviate from CTO content structure without flagging it
 - Do NOT modify constitution files
-- If researcher findings have fewer than 3 sources, STOP and write a note in developer-summary.md asking Researcher to run again
+- If researcher findings have fewer than 3 sources, STOP and write a note in developer-summary.md asking Researcher to run again — this is a generic floor, not the acceptance bar; if the current cycle's `cto-analysis.md` specifies a stricter source requirement (count and/or primary-source mix), that brief governs and this floor only applies when the brief is silent

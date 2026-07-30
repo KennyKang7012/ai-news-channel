@@ -61,17 +61,34 @@ for file in "${REQUIRED_FILES[@]}"; do
   fi
 done
 
-# Check 3: Article word count
+# Check 3: Article length (word count for English, character count for Chinese)
 echo ""
-echo "📝 Checking article word count..."
+echo "📝 Checking article length..."
 if [ -f "$DELIVERABLES/article.md" ]; then
-  WORD_COUNT=$(wc -w < "$DELIVERABLES/article.md")
-  if [ "$WORD_COUNT" -ge 800 ] && [ "$WORD_COUNT" -le 1200 ]; then
-    echo "  ✅ Word count: $WORD_COUNT (target: 800-1200)"
+  LANG_TAG=$(grep -m1 '^lang:' "$DELIVERABLES/article.md" | sed 's/^lang:[[:space:]]*//' | tr -d '"'"'"'' | xargs)
+  if [[ "$LANG_TAG" == zh* ]]; then
+    # wc -w cannot count Chinese text (no whitespace word boundaries) — count CJK characters instead
+    CJK_COUNT=$(python3 -c "
+import re
+text = open('$DELIVERABLES/article.md', encoding='utf-8').read()
+print(len(re.findall(r'[一-鿿]', text)))
+")
+    if [ "$CJK_COUNT" -ge 1400 ] && [ "$CJK_COUNT" -le 2100 ]; then
+      echo "  ✅ Chinese character count: $CJK_COUNT (target: 1,400-2,100 中文字, lang=$LANG_TAG)"
+    else
+      echo "  ❌ Chinese character count: $CJK_COUNT (out of range 1,400-2,100, lang=$LANG_TAG)"
+      ISSUES+=("Article Chinese character count $CJK_COUNT is outside 1,400-2,100 range")
+      PASS=false
+    fi
   else
-    echo "  ❌ Word count: $WORD_COUNT (out of range 800-1200)"
-    ISSUES+=("Article word count $WORD_COUNT is outside 800-1200 range")
-    PASS=false
+    WORD_COUNT=$(wc -w < "$DELIVERABLES/article.md")
+    if [ "$WORD_COUNT" -ge 800 ] && [ "$WORD_COUNT" -le 1200 ]; then
+      echo "  ✅ Word count: $WORD_COUNT (target: 800-1200)"
+    else
+      echo "  ❌ Word count: $WORD_COUNT (out of range 800-1200)"
+      ISSUES+=("Article word count $WORD_COUNT is outside 800-1200 range")
+      PASS=false
+    fi
   fi
 fi
 
@@ -94,8 +111,11 @@ echo ""
 echo "🐦 Checking Twitter/X post length..."
 if [ -f "$DELIVERABLES/social-posts.md" ]; then
   # Extract lines after Twitter section
-  TWITTER_POST=$(awk '/Twitter|twitter|X\)/{found=1; next} found && /^##/{exit} found && /\S/{print}' "$DELIVERABLES/social-posts.md" | head -5 | tr -d '\n')
-  CHAR_COUNT=${#TWITTER_POST}
+  # NF>0 (not /\S/) — BSD awk (macOS default) treats \S as a literal "S", not "non-whitespace"
+  TWITTER_POST=$(awk '/Twitter|twitter|X\)/{found=1; next} found && /^##/{exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | head -5 | tr -d '\n')
+  # bash `${#string}` counts bytes under C/POSIX locale, inflating multi-byte UTF-8 (e.g. Chinese)
+  # characters ~3x — use python3 len() so the count is locale-independent
+  CHAR_COUNT=$(python3 -c "import sys; print(len(sys.argv[1]))" "$TWITTER_POST")
   if [ "$CHAR_COUNT" -le 280 ] && [ "$CHAR_COUNT" -gt 0 ]; then
     echo "  ✅ Twitter post: $CHAR_COUNT chars"
   elif [ "$CHAR_COUNT" -eq 0 ]; then
@@ -108,7 +128,26 @@ if [ -f "$DELIVERABLES/social-posts.md" ]; then
   fi
 fi
 
-# Check 6: Image prompt dimensions
+# Check 6: Instagram caption length
+echo ""
+echo "📸 Checking Instagram caption length..."
+if [ -f "$DELIVERABLES/social-posts.md" ]; then
+  IG_POST=$(awk '/Instagram|instagram/{found=1; next} found && /^##/{exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | tr -d '\n')
+  IG_CHAR_COUNT=$(python3 -c "import sys; print(len(sys.argv[1]))" "$IG_POST")
+  if [ "$IG_CHAR_COUNT" -le 2200 ] && [ "$IG_CHAR_COUNT" -gt 0 ]; then
+    echo "  ✅ Instagram caption: $IG_CHAR_COUNT chars"
+  elif [ "$IG_CHAR_COUNT" -eq 0 ]; then
+    echo "  ❌ Could not find Instagram caption section"
+    ISSUES+=("Missing or unparseable Instagram caption — verify social-posts.md has an Instagram section")
+    PASS=false
+  else
+    echo "  ❌ Instagram caption: $IG_CHAR_COUNT chars (max: 2200)"
+    ISSUES+=("Instagram caption too long: $IG_CHAR_COUNT chars")
+    PASS=false
+  fi
+fi
+
+# Check 7: Image prompt dimensions
 echo ""
 echo "🖼️  Checking image prompt specs..."
 if [ -f "$DELIVERABLES/image-prompt.md" ]; then
@@ -129,7 +168,7 @@ if [ -f "$DELIVERABLES/image-prompt.md" ]; then
   fi
 fi
 
-# Check 7: Newsletter subject line
+# Check 8: Newsletter subject line
 echo ""
 echo "📧 Checking newsletter..."
 if [ -f "$DELIVERABLES/newsletter.md" ]; then
