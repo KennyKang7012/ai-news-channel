@@ -30,11 +30,23 @@ DEFAULT_MODEL = "gpt-5.5"
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 
-def call_openai(prompt: str, api_key: str, model: str = DEFAULT_MODEL) -> str:
+def call_openai(prompt: str, api_key: str, model: str = DEFAULT_MODEL,
+                system: str = None, max_completion_tokens: int = 4096) -> str:
+    """
+    Call the OpenAI chat completions API. Raises RuntimeError on failure —
+    callers that import this function (e.g. call_gemini_vision.py) can catch
+    that and fall back gracefully; main() below catches it for CLI use and
+    exits 1, preserving the previous command-line behavior.
+    """
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
     payload = json.dumps({
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_completion_tokens": 4096
+        "messages": messages,
+        "max_completion_tokens": max_completion_tokens
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -52,11 +64,9 @@ def call_openai(prompt: str, api_key: str, model: str = DEFAULT_MODEL) -> str:
             return data["choices"][0]["message"]["content"]
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
-        print(f"[ERROR] OpenAI API HTTP {e.code}: {body}", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(f"OpenAI API HTTP {e.code}: {body}") from e
     except Exception as e:
-        print(f"[ERROR] {e}", file=sys.stderr)
-        sys.exit(1)
+        raise RuntimeError(str(e)) from e
 
 
 def main():
@@ -74,21 +84,25 @@ def main():
         print("  export OPENAI_API_KEY=your_key_here", file=sys.stderr)
         sys.exit(1)
 
-    if args.test:
-        print(f"Testing OpenAI API (model: {args.model})...")
-        result = call_openai(
-            "Reply with exactly: 'OpenAI API connection successful'",
-            api_key, model=args.model
-        )
-        print(f"✅ {result.strip()}")
-        return
+    try:
+        if args.test:
+            print(f"Testing OpenAI API (model: {args.model})...")
+            result = call_openai(
+                "Reply with exactly: 'OpenAI API connection successful'",
+                api_key, model=args.model
+            )
+            print(f"✅ {result.strip()}")
+            return
 
-    if not args.prompt:
-        print("[ERROR] --prompt required (or --test)", file=sys.stderr)
+        if not args.prompt:
+            print("[ERROR] --prompt required (or --test)", file=sys.stderr)
+            sys.exit(1)
+
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Calling {args.model}...")
+        result = call_openai(args.prompt, api_key, model=args.model)
+    except RuntimeError as e:
+        print(f"[ERROR] {e}", file=sys.stderr)
         sys.exit(1)
-
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Calling {args.model}...")
-    result = call_openai(args.prompt, api_key, model=args.model)
 
     if args.output:
         os.makedirs(os.path.dirname(args.output) if os.path.dirname(args.output) else ".", exist_ok=True)

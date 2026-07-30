@@ -30,19 +30,24 @@ For each daily cycle, run AT MINIMUM these searches:
 ```bash
 # Query 1: Today's main topic (from CTO brief)
 python3 .claude/scripts/call_gemini.py \
+  --model gemini-2.5-flash \
   --prompt "Research today's most significant AI news about: <topic from CTO brief>. Find minimum 3 credible sources. Include: source name, URL, publication date, key facts, and direct quotes where relevant." \
   --output working-notes/tmp-research-1.md
 
 # Query 2: Context & background
 python3 .claude/scripts/call_gemini.py \
+  --model gemini-2.5-flash \
   --prompt "Provide background context on <topic>: What led to this? Who are the key players? What is the broader industry significance? Use recent sources from the last 30 days." \
   --output working-notes/tmp-research-2.md
 
 # Query 3: Reactions & expert opinions
 python3 .claude/scripts/call_gemini.py \
+  --model gemini-2.5-flash \
   --prompt "What are expert reactions, criticism, and diverse perspectives on <topic>? Include at least 2 different viewpoints." \
   --output working-notes/tmp-research-3.md
 ```
+
+**Always pass `--model gemini-2.5-flash` explicitly.** All queries must run with Google Search grounding on (the wrapper's default; do not pass `--no-grounding`) — without it, the model has no live web access and can fabricate plausible-looking URLs/facts for recent-news queries. `gemini-3-flash-preview` (the wrapper's own default model) and `gemini-2.0-flash` have been confirmed to hit `429 RESOURCE_EXHAUSTED` for grounded requests on the free tier; `gemini-2.5-flash` is confirmed working. Each `call_gemini.py` response appends a `## Grounding Sources (Google Search)` block — carry those URLs into `Sources Verified` below; if that block says "(none returned...)", treat the response as unverified and flag it rather than citing it as a source.
 
 Then consolidate all findings into `working-notes/researcher-findings.md`.
 

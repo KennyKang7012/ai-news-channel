@@ -35,10 +35,16 @@ GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 def call_gemini(prompt: str, api_key: str, model: str = DEFAULT_MODEL,
-                thinking_level: str = "medium") -> str:
+                thinking_level: str = "medium", grounding: bool = True) -> str:
     """
     Call Gemini API. Gemini 3 models use thinking_level (minimal/low/medium/high)
     instead of the old thinking_budget parameter.
+
+    grounding=True enables the Google Search tool so the model retrieves live
+    web results instead of generating URLs/facts from training data alone
+    (which for recent-news queries produces plausible-looking but fabricated
+    sources). Grounding sources actually returned by Google Search are
+    appended to the output under "## Grounding Sources (Google Search)".
     """
     generation_config = {
         "temperature": 0.7,
@@ -50,16 +56,13 @@ def call_gemini(prompt: str, api_key: str, model: str = DEFAULT_MODEL,
         generation_config["thinkingConfig"] = {
             "thinkingLevel": thinking_level  # minimal | low | medium | high
         }
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": generation_config
-        }
-    else:
-        # Gemini 2.x fallback (no thinking config needed)
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": generation_config
-        }
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": generation_config
+    }
+    if grounding:
+        payload["tools"] = [{"google_search": {}}]
 
     data = json.dumps(payload).encode("utf-8")
     url = f"{GEMINI_API_BASE}/{model}:generateContent?key={api_key}"
@@ -76,9 +79,25 @@ def call_gemini(prompt: str, api_key: str, model: str = DEFAULT_MODEL,
             if not candidates:
                 print(f"[ERROR] No candidates in response: {data}", file=sys.stderr)
                 sys.exit(1)
-            parts = candidates[0].get("content", {}).get("parts", [])
+            candidate = candidates[0]
+            parts = candidate.get("content", {}).get("parts", [])
             # Filter to text parts only — Gemini 3 may include thoughtSignature parts
-            return "\n".join(p["text"] for p in parts if "text" in p)
+            text = "\n".join(p["text"] for p in parts if "text" in p)
+
+            grounding_metadata = candidate.get("groundingMetadata")
+            if grounding_metadata:
+                chunks = grounding_metadata.get("groundingChunks", [])
+                web_sources = [c["web"] for c in chunks if "web" in c]
+                if web_sources:
+                    source_lines = "\n".join(
+                        f"- {s.get('title', 'untitled')} — {s.get('uri', '')}"
+                        for s in web_sources
+                    )
+                    text += f"\n\n## Grounding Sources (Google Search)\n{source_lines}"
+                elif grounding:
+                    text += "\n\n## Grounding Sources (Google Search)\n(none returned — treat this response as unverified and flag it)"
+
+            return text
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
         print(f"[ERROR] Gemini API HTTP {e.code}: {body}", file=sys.stderr)
@@ -98,6 +117,9 @@ def main():
                         choices=["minimal", "low", "medium", "high"],
                         help="Thinking level for Gemini 3 models (default: medium)")
     parser.add_argument("--test", action="store_true", help="Run a connection test")
+    parser.add_argument("--no-grounding", action="store_true",
+                        help="Disable Google Search grounding (default: grounding ON — "
+                             "without it, results for recent/news queries may be fabricated)")
     args = parser.parse_args()
 
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -110,7 +132,7 @@ def main():
         print(f"Testing Gemini API (model: {args.model}, thinking: {args.thinking})...")
         result = call_gemini(
             "Reply with exactly: 'Gemini API connection successful'",
-            api_key, model=args.model, thinking_level=args.thinking
+            api_key, model=args.model, thinking_level=args.thinking, grounding=False
         )
         print(f"✅ {result.strip()}")
         return
@@ -119,8 +141,11 @@ def main():
         print("[ERROR] --prompt required (or --test)", file=sys.stderr)
         sys.exit(1)
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Calling {args.model} (thinking: {args.thinking})...")
-    result = call_gemini(args.prompt, api_key, model=args.model, thinking_level=args.thinking)
+    grounding = not args.no_grounding
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Calling {args.model} "
+          f"(thinking: {args.thinking}, grounding: {grounding})...")
+    result = call_gemini(args.prompt, api_key, model=args.model,
+                         thinking_level=args.thinking, grounding=grounding)
 
     if args.output:
         os.makedirs(os.path.dirname(args.output) if os.path.dirname(args.output) else ".", exist_ok=True)

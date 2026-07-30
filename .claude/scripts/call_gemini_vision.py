@@ -30,14 +30,18 @@ import base64
 import sys
 from datetime import datetime
 
+# call_openai.py lives in the same directory — Python puts the running
+# script's own directory at sys.path[0], so this import works regardless
+# of the caller's cwd.
+from call_openai import call_openai
+
 IMAGE_MODEL = "gpt-image-2"
 IMAGE_API_URL = "https://api.openai.com/v1/images/generations"
 TEXT_MODEL = "gpt-5.5"
-TEXT_API_URL = "https://api.openai.com/v1/chat/completions"
 
 
 def refine_image_prompt(raw_prompt: str, api_key: str, spec: str = "2500x1686") -> str:
-    """Use gpt-5.5 to refine a rough image prompt for gpt-image-2."""
+    """Use gpt-5.5 (via call_openai.py) to refine a rough image prompt for gpt-image-2."""
     system = (
         f"You are a professional creative director. "
         f"Refine the following image prompt for gpt-image-2, which excels at layouts, "
@@ -45,28 +49,10 @@ def refine_image_prompt(raw_prompt: str, api_key: str, spec: str = "2500x1686") 
         f"Target spec: {spec}px. "
         f"Output only the refined prompt — no explanation, no preamble."
     )
-    payload = json.dumps({
-        "model": TEXT_MODEL,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": raw_prompt}
-        ],
-        "max_tokens": 512,
-        "temperature": 0.6
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        TEXT_API_URL, data=payload,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-    )
     try:
-        with urllib.request.urlopen(req, timeout=60) as res:
-            data = json.loads(res.read())
-            return data["choices"][0]["message"]["content"].strip()
-    except Exception as e:
+        return call_openai(raw_prompt, api_key, model=TEXT_MODEL,
+                           system=system, max_completion_tokens=512).strip()
+    except RuntimeError as e:
         print(f"[WARNING] Prompt refinement failed: {e} — using raw prompt", file=sys.stderr)
         return raw_prompt
 
@@ -125,20 +111,16 @@ def main():
 
     if args.test:
         print(f"Testing gpt-image-2 API connection...")
-        # Text-only test (cheaper)
-        payload = json.dumps({
-            "model": TEXT_MODEL,
-            "messages": [{"role": "user", "content": "Reply: 'Image API ready'"}],
-            "max_tokens": 10
-        }).encode()
-        req = urllib.request.Request(TEXT_API_URL, data=payload,
-                                     headers={"Authorization": f"Bearer {api_key}",
-                                              "Content-Type": "application/json"})
-        with urllib.request.urlopen(req) as res:
-            data = json.loads(res.read())
-            print(f"✅ {data['choices'][0]['message']['content'].strip()}")
-            print(f"   Model: {IMAGE_MODEL} (image generation)")
-            print(f"   Text refiner: {TEXT_MODEL}")
+        # Text-only test (cheaper) — reuses call_openai.py, no separate request logic here
+        try:
+            result = call_openai("Reply: 'Image API ready'", api_key,
+                                 model=TEXT_MODEL, max_completion_tokens=10)
+        except RuntimeError as e:
+            print(f"[ERROR] {e}", file=sys.stderr)
+            sys.exit(1)
+        print(f"✅ {result.strip()}")
+        print(f"   Model: {IMAGE_MODEL} (image generation)")
+        print(f"   Text refiner: {TEXT_MODEL}")
         return
 
     if not args.prompt:
