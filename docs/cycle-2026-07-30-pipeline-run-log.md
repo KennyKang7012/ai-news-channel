@@ -146,5 +146,23 @@ HTTP Error 400: Bad Request
 | `call_gemini_vision.py` gpt-5.5 參數修正 | `--test` | ✅ |
 | `call_openai.py` / `call_gemini_vision.py` 共用重構 | `call_openai.py --test`、`call_gemini_vision.py --test`、實際精修呼叫 | ✅ 三項皆過 |
 | Developer 產出通過 `verify_build.sh` | `run_daily.sh --dry-run` Step 1/4 | ✅ PASS |
+| `verify_build.sh` Twitter/Instagram `---` 擷取修正 | `verify_build.sh --date 2026-07-30`（真實資料重跑） | ✅ Twitter 138→135，Instagram 566 不變 |
 
 **尚未處理（記錄待指示）：** `CLAUDE.md` 的「Researcher and Designer run on separate Gemini instances」規則措辭過時，尚未更新。
+
+---
+
+## 七、Supervisor 正式驗收後追加修正｜`verify_build.sh` Twitter/Instagram 擷取的 `---` 分隔線 bug
+
+**發現時機：** Supervisor 對 2026-07-30 交付物做正式驗收時，獨立重新計算所有字數，與腳本自動檢查的結果比對，發現 Twitter 一項對不上。
+
+**問題：** `verify_build.sh` Check 5（Twitter）與 Check 6（Instagram）的 awk 擷取邏輯，退出條件只有「遇到下一個 `##` 標題」，沒有處理 `social-posts.md` 每個段落之間的 `---` 分隔線。若貼文內容與下一個 `##` 標題之間夾著一行單獨的 `---`，這 3 個字元會被一併算進字數，造成灌水。
+
+**實測影響：** 這輪 Twitter 貼文，腳本原本回報 138 字元，Supervisor 手動獨立驗算的真實字數是 135。差 3 個字元剛好對應被誤算進去的 `---`。這輪因為 135、138 都遠低於 280 上限，不影響 PASS/FAIL 結果，但 Supervisor 主動指出：這是這支腳本(已於本文件第一輪修正)第一次真正跑完整輪，若未來某輪貼文字數卡在 280 上限附近，這 3 個字元的灌水可能造成誤判 FAIL。Instagram 這次沒踩到，是因為那個段落後面接的是 `### Alt text` 子標題，中間沒有夾 `---`，純屬巧合，不是邏輯本身沒問題。
+
+**修正（`.claude/scripts/verify_build.sh`）：** Twitter、Instagram 兩處 awk 擷取的退出條件都改成同時比對 `^##` 或 `^---+$`，兩者任一命中就停止擷取：
+```awk
+found && (/^##/ || /^---+$/){exit}
+```
+
+**驗證：** 用今天真實的 2026-07-30 交付物重跑 `verify_build.sh --date 2026-07-30`：Twitter 從 138 改為 **135**（與 Supervisor 手動驗算結果完全吻合），Instagram 維持 566（不受影響），8 項檢查全數 PASS。

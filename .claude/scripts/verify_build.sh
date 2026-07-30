@@ -112,7 +112,9 @@ echo "🐦 Checking Twitter/X post length..."
 if [ -f "$DELIVERABLES/social-posts.md" ]; then
   # Extract lines after Twitter section
   # NF>0 (not /\S/) — BSD awk (macOS default) treats \S as a literal "S", not "non-whitespace"
-  TWITTER_POST=$(awk '/Twitter|twitter|X\)/{found=1; next} found && /^##/{exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | head -5 | tr -d '\n')
+  # Exit on a bare "---" divider too, not just the next "##" heading — otherwise the 3-char
+  # horizontal-rule line between sections gets concatenated into the counted text
+  TWITTER_POST=$(awk '/Twitter|twitter|X\)/{found=1; next} found && (/^##/ || /^---+$/){exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | head -5 | tr -d '\n')
   # bash `${#string}` counts bytes under C/POSIX locale, inflating multi-byte UTF-8 (e.g. Chinese)
   # characters ~3x — use python3 len() so the count is locale-independent
   CHAR_COUNT=$(python3 -c "import sys; print(len(sys.argv[1]))" "$TWITTER_POST")
@@ -132,7 +134,7 @@ fi
 echo ""
 echo "📸 Checking Instagram caption length..."
 if [ -f "$DELIVERABLES/social-posts.md" ]; then
-  IG_POST=$(awk '/Instagram|instagram/{found=1; next} found && /^##/{exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | tr -d '\n')
+  IG_POST=$(awk '/Instagram|instagram/{found=1; next} found && (/^##/ || /^---+$/){exit} found && NF>0{print}' "$DELIVERABLES/social-posts.md" | tr -d '\n')
   IG_CHAR_COUNT=$(python3 -c "import sys; print(len(sys.argv[1]))" "$IG_POST")
   if [ "$IG_CHAR_COUNT" -le 2200 ] && [ "$IG_CHAR_COUNT" -gt 0 ]; then
     echo "  ✅ Instagram caption: $IG_CHAR_COUNT chars"
