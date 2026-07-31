@@ -166,3 +166,19 @@ found && (/^##/ || /^---+$/){exit}
 ```
 
 **驗證：** 用今天真實的 2026-07-30 交付物重跑 `verify_build.sh --date 2026-07-30`：Twitter 從 138 改為 **135**（與 Supervisor 手動驗算結果完全吻合），Instagram 維持 566（不受影響），8 項檢查全數 PASS。
+
+---
+
+## 八、事後稽核（2026-08-01）｜確認「是否真的用 gpt-image-2 生過圖」
+
+**發現時機：** PM 詢問專案是否有使用 gpt-image-2 產生圖檔，順勢做一次全專案掃描確認。
+
+**確認結果：**
+
+1. **生圖的腳本是 `call_gemini_vision.py`，不是 `call_openai.py`。** 兩者分工：
+   - `call_openai.py` 只是純文字生成 wrapper（`POST /v1/chat/completions`，gpt-5.5），提供共用函式 `call_openai()`（即第五節重構後被 import 的那個函式）。
+   - `call_gemini_vision.py` 內部的 `refine_image_prompt()` 呼叫上述共用函式做「prompt 精修」；真正打 `POST /v1/images/generations`（gpt-image-2）生圖的邏輯是它自己的 `generate_image()` 函式，只有在 CLI 帶 `--generate` 時才會被觸發。
+2. **全專案掃描 `knowledge-base/` 底下所有檔案，沒有任何一個 `.png` 或已生成的圖檔**——2026-07-30 循環只留下 `deliverables/2026-07-30/image-prompt.md`（精修後的提示詞文字），`designer-output.md` 也明確寫著「No image provided for review... rendering and image generation are a separate, subsequent step」。
+3. 這與 `designer.md` 的規則一致：`--generate` 會觸發實際計費的 gpt-image-2 呼叫，除非 PM 明確要求本輪要出真圖，否則 Designer 一律只做 prompt 精修（dry run）。
+
+**結論：** 專案目前對 gpt-image-2 的整合僅止於「串接就緒、尚未實際呼叫生圖」——`call_gemini_vision.py --generate` 這條路徑至今從未被執行過。
